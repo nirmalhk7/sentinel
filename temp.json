@@ -1,0 +1,291 @@
+[
+    {
+        "arguments": "/opt/anaconda3/bin/dnsrecon -d google.com -j temp.json",
+        "date": "2025-09-22 21:51:43.480631",
+        "type": "ScanInfo"
+    },
+    {
+        "address": "216.239.32.10",
+        "domain": "google.com",
+        "mname": "ns1.google.com",
+        "type": "SOA"
+    },
+    {
+        "address": "2001:4860:4802:32::a",
+        "domain": "google.com",
+        "mname": "ns1.google.com",
+        "type": "SOA"
+    },
+    {
+        "Version": "",
+        "address": "216.239.34.10",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns2.google.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2001:4860:4802:34::a",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns2.google.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "216.239.36.10",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns3.google.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2001:4860:4802:36::a",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns3.google.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "216.239.38.10",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns4.google.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2001:4860:4802:38::a",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns4.google.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "216.239.32.10",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns1.google.com",
+        "type": "NS"
+    },
+    {
+        "Version": "",
+        "address": "2001:4860:4802:32::a",
+        "domain": "google.com",
+        "recursive": "True",
+        "target": "ns1.google.com",
+        "type": "NS"
+    },
+    {
+        "address": "172.217.214.26",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "108.177.121.26",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "173.194.64.26",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "192.178.210.26",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "173.194.64.27",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "2607:f8b0:4001:c08::1a",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "2607:f8b0:4001:c08::1b",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "2607:f8b0:4001:c06::1b",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "2607:f8b0:4001:c06::1a",
+        "domain": "google.com",
+        "exchange": "smtp.google.com",
+        "type": "MX"
+    },
+    {
+        "address": "142.250.69.238",
+        "domain": "google.com",
+        "name": "google.com",
+        "type": "A"
+    },
+    {
+        "address": "2607:f8b0:400f:802::200e",
+        "domain": "google.com",
+        "name": "google.com",
+        "type": "AAAA"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "v=spf1 include:_spf.google.com ~all",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "google-site-verification=4ibFUgB-wXLQ_S7vsXVomSTVamuOXBiVAzpR5IZ87D0",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "MS=E4A68B9AB2BB9670BCE15412F62916164C0B20BB",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "globalsign-smime-dv=CDYX+XFHUw2wml6/Gb8+59BsH31KzUr6c1l2BPvqKX8=",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "docusign=1b0a6754-49b1-4db5-8540-d2c12664b289",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "onetrust-domain-verification=de01ed21f2fa4d8781cbc3ffb89cf4ef",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "google-site-verification=wD8N7i1JTNTkezJ49swvWW48f8_9xveREV4oB-0Hf5o",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "cisco-ci-domain-verification=47c38bc8c4b74b7233e9053220c1bbe76bcc1cd33c7acf7acd36cd6a5332004b",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "google-site-verification=TV9-DBe4R80X4v0M4U_bd_J9cpOJM0nikft0jAgjmsQ",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "apple-domain-verification=30afIBcvSuDV2PLX",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "docusign=05958488-4752-4ef2-95eb-aa7ba8a3bd0e",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "google.com",
+        "strings": "facebook-domain-verification=22rm551cu4k0ab0bxsw536tlds4h95",
+        "type": "TXT"
+    },
+    {
+        "domain": "google.com",
+        "name": "_dmarc.google.com",
+        "strings": "v=DMARC1; p=reject; rua=mailto:mailauth-reports@google.com",
+        "type": "TXT"
+    },
+    {
+        "address": "216.239.32.58",
+        "domain": "google.com",
+        "name": "_ldap._tcp.google.com",
+        "port": "389",
+        "target": "ldap.google.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2001:4860:4802:32::3a",
+        "domain": "google.com",
+        "name": "_ldap._tcp.google.com",
+        "port": "389",
+        "target": "ldap.google.com",
+        "type": "SRV"
+    },
+    {
+        "address": "142.250.72.78",
+        "domain": "google.com",
+        "name": "_caldavs._tcp.google.com",
+        "port": "443",
+        "target": "calendar.google.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2607:f8b0:400f:803::200e",
+        "domain": "google.com",
+        "name": "_caldavs._tcp.google.com",
+        "port": "443",
+        "target": "calendar.google.com",
+        "type": "SRV"
+    },
+    {
+        "address": "142.250.69.238",
+        "domain": "google.com",
+        "name": "_carddavs._tcp.google.com",
+        "port": "443",
+        "target": "google.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2607:f8b0:400f:802::200e",
+        "domain": "google.com",
+        "name": "_carddavs._tcp.google.com",
+        "port": "443",
+        "target": "google.com",
+        "type": "SRV"
+    },
+    {
+        "address": "142.250.72.78",
+        "domain": "google.com",
+        "name": "_caldav._tcp.google.com",
+        "port": "80",
+        "target": "calendar.google.com",
+        "type": "SRV"
+    },
+    {
+        "address": "2607:f8b0:400f:803::200e",
+        "domain": "google.com",
+        "name": "_caldav._tcp.google.com",
+        "port": "80",
+        "target": "calendar.google.com",
+        "type": "SRV"
+    }
+]

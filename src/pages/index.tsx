@@ -1,115 +1,120 @@
+import { useState } from "react";
+import axios from "axios";
 import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import Head from "next/head";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+export default function Scanner() {
+  const [domain, setDomain] = useState("");
+  const [logs, setLogs] = useState<string[]>([]);
+  const [scanResults, setScanResults] = useState<any>(null);
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  const handleScan = async () => {
+    if (!domain) {
+      setLogs((prevLogs) => [...prevLogs, "Please enter a valid domain."]);
+      return;
+    }
 
-export default function Home() {
+    setLogs((prevLogs) => [...prevLogs, `Starting scan for: ${domain}`]);
+
+    const apis = ["/api/dnsrecon", "/api/nmap", "/api/nikto", "/api/whatweb"];
+    const results: Record<string, { success: boolean; output?: string; error?: string }> = {};
+
+    for (const api of apis) {
+      try {
+        const response = await axios.post(api, { domain });
+        results[api] = { success: true, output: response.data.rawOutput };
+        setLogs((prevLogs) => [...prevLogs, `Success: ${api}`]);
+      } catch (error: any) {
+        results[api] = { success: false, error: error.response?.data?.error || error.message };
+        setLogs((prevLogs) => [...prevLogs, `Error: ${api} - ${results[api].error}`]);
+      }
+    }
+
+    setScanResults(results);
+  };
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20`}
-    >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <>
+      <Head>
+        <title>Recon Lab</title>
+        <meta name="description" content="Recon Lab - A powerful reconnaissance and vulnerability scanning tool." />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 dark:text-white">
+        <div className="top-4 left-4 z-10">
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={400}
+            height={400}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        <main className="px-8 py-10">
+          <div className="mb-6">
+            <label htmlFor="domain" className="block text-lg font-medium mb-2">
+              Enter Domain to Scan:
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="domain"
+                type="text"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                className="flex-1 px-4 py-2 border border-zinc-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                placeholder="e.g., example.com"
+              />
+              <button
+                onClick={handleScan}
+                className="px-4 py-2 bg-sky-500 text-white rounded-lg shadow hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400"
+              >
+                Start Scan
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-4">Live Console Log</h2>
+            <div className="h-64 bg-zinc-900 text-white p-4 rounded-lg overflow-y-auto shadow-inner">
+              {logs.length === 0 ? (
+                <p className="text-zinc-500">No logs yet...</p>
+              ) : (
+                logs.map((log, index) => (
+                  <pre key={index} className="text-sm whitespace-pre-wrap">
+                    {log}
+                  </pre>
+                ))
+              )}
+            </div>
+          </div>
+
+          {scanResults && (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-4">Structured Data Tables</h2>
+              {Object.entries(scanResults).map(([api, result]) => {
+                const typedResult = result as { success: boolean; output?: string; error?: string };
+                return (
+                  <div key={api} className="mb-4">
+                    <h3 className="text-lg font-medium mb-2">{api}</h3>
+                    {typedResult.success ? (
+                      <pre className="bg-zinc-100 p-4 rounded-lg overflow-x-auto">
+                        {typedResult.output}
+                      </pre>
+                    ) : (
+                      <p className="text-red-500">Error: {typedResult.error}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Asset Graph Visualization</h2>
+            <p className="text-zinc-500">(Graph visualization will appear here after the scan)</p>
+          </div>
+        </main>
+      </div>
+    </>
   );
 }
