@@ -11,12 +11,17 @@
   "dependencies": {
     "axios": "^1.12.2",
     "browserless": "^10.9.4",
+    "cheerio": "^1.2.0",
+    "link-check": "^5.5.1",
     "next": "15.5.3",
     "next-logger": "^5.0.1",
+    "node-forge": "^1.4.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "semver": "^7.7.4",
     "simple-wappalyzer": "^1.1.80",
     "ssl-checker": "^2.0.10",
+    "tldts": "^7.0.27",
     "traceroute": "^1.0.0",
     "whois": "^2.15.0"
   },
