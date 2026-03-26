@@ -15,6 +15,9 @@ interface ScanEvent {
   type: 'result' | 'progress' | 'done' | 'error';
   payload?: ScanResult;
   message?: string;
+  current?: number;
+  total?: number;
+  crawlTree?: Record<string, { url: string; children: string[]; type: 'page' | 'js' | 'subdomain' | 'api' }>;
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
@@ -29,15 +32,18 @@ const CATEGORIES = ['All', 'Software Identification', 'Header Security', 'Cookie
   'Protocol & Methods', 'API & CORS', 'Caching', 'Client-Side', 'Content Analysis', 'Miscellaneous'];
 
 export default function Scanner() {
-  const [domain, setDomain] = useState('');
+  const [target, setTarget] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [results, setResults] = useState<ScanResult[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('All');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<string>('All (Critical)');
+  const [totalSteps, setTotalSteps] = useState<number>(0);
+  const [currentStep, setCurrentStep] = useState<number>(0);
   const [sortBy, setSortBy] = useState<'id' | 'status'>('id');
+  const [crawlTree, setCrawlTree] = useState<Record<string, { url: string; children: string[]; type: string }> | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +53,7 @@ export default function Scanner() {
 
   const startScan = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!domain.trim() || isScanning) return;
+    if (!target.trim() || isScanning) return;
 
     // Reset state
     setResults([]);
@@ -56,22 +62,21 @@ export default function Scanner() {
     setIsDone(false);
     setIsScanning(true);
     setFilter('All');
-    setStatusFilter('All');
+    setStatusFilter('All (Critical)');
+    setTotalSteps(0);
+    setCurrentStep(0);
+    setCrawlTree(null);
 
-    // Close previous stream if any
-    eventSourceRef.current?.close();
-
-    // SSE streams require GET or we use fetch + ReadableStream
-    // Since Next.js SSE route is POST, use fetch + manual stream reading
     const abortController = new AbortController();
-    eventSourceRef.current = null;
+    const apiRoute = '/api/scan/stream';
+    const body = { domain: target.trim() };
 
     (async () => {
       try {
-        const resp = await fetch('/api/scan/stream', {
+        const resp = await fetch(apiRoute, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domain: domain.trim() }),
+          body: JSON.stringify(body),
           signal: abortController.signal,
         });
 
@@ -105,9 +110,13 @@ export default function Scanner() {
               if (event.type === 'result' && event.payload) {
                 setResults(prev => [...prev, event.payload!]);
               } else if (event.type === 'progress' && event.message) {
+                if (event.current != null) setCurrentStep(event.current);
+                if (event.total != null) setTotalSteps(event.total);
+                if (event.message === 'INIT_STATS') continue;
                 setLogs(prev => [...prev, `⚡ ${event.message}`]);
               } else if (event.type === 'done') {
                 setLogs(prev => [...prev, '✅ Scan complete!']);
+                if (event.crawlTree) setCrawlTree(event.crawlTree);
                 setIsDone(true);
               } else if (event.type === 'error') {
                 setError(event.message ?? 'Unknown error');
@@ -147,23 +156,52 @@ export default function Scanner() {
     : null;
 
   const filteredResults = results
+    .filter(r => r.status !== 'SAFE') // User requested: "The UI shouldnt show me Safe results"
     .filter(r => filter === 'All' || r.category === filter)
-    .filter(r => statusFilter === 'All' || r.status === statusFilter)
-    .sort((a, b) => sortBy === 'id' ? a.id - b.id : ['VULNERABLE','WARNING','SAFE','NEUTRAL'].indexOf(a.status) - ['VULNERABLE','WARNING','SAFE','NEUTRAL'].indexOf(b.status));
+    .filter(r => statusFilter === 'All (Critical)' || r.status === statusFilter)
+    .sort((a, b) => sortBy === 'id' ? a.id - b.id : ['VULNERABLE','WARNING','NEUTRAL'].indexOf(a.status) - ['VULNERABLE','WARNING','NEUTRAL'].indexOf(b.status));
 
   const categories = [...new Set(results.map(r => r.category))];
 
   return (
     <div className="min-h-screen bg-[#07090f] text-slate-200" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       <Head>
-        <title>Security Audit Lab | Vulnerability Scanner</title>
+        <title>HackLab | Vulnerability Scanner</title>
         <meta name="description" content="Real-time 40-point web vulnerability and OSINT scanner." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" />
       </Head>
 
+      {/* ── Navbar ── */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#07090f]/80 backdrop-blur-md border-b border-slate-800/60">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-sky-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-600/20">
+               <span className="text-white font-black text-xl">H</span>
+            </div>
+            <span className="text-white font-bold tracking-tight">HACKLAB <span className="text-sky-500">PRO</span></span>
+          </div>
+          <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
+            <button 
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white`}
+            >
+              Website Audit
+            </button>
+            <a 
+              href="/local"
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
+            >
+              Local Network
+            </a>
+          </div>
+          <div className="hidden md:flex items-center gap-4">
+             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Version 2.4.0</span>
+          </div>
+        </div>
+      </nav>
+
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden border-b border-slate-800/60">
+      <div className="relative overflow-hidden border-b border-slate-800/60 pt-16">
         <div className="absolute inset-0 pointer-events-none">
           <img src="/audit-header.png" alt="" className="w-full h-full object-cover opacity-15 blur-sm" />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, #07090f 0%, transparent 40%, #07090f 100%)' }} />
@@ -172,14 +210,14 @@ export default function Scanner() {
         <div className="relative z-10 max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
           <div className="inline-flex items-center gap-2 bg-sky-500/10 border border-sky-400/20 text-sky-400 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            40-Point Security Audit + OSINT
+            Multi-Point Security Audit + OSINT
           </div>
-
+ 
           <h1 className="text-5xl font-black mb-4 leading-tight" style={{ background: 'linear-gradient(135deg, #fff 0%, #93c5fd 50%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Security Audit Lab
+            Website Audit
           </h1>
           <p className="text-slate-400 text-base max-w-xl mx-auto mb-10">
-            Streaming vulnerability scanner — headers, TLS, cookies, DNS, WHOIS, OSINT &amp; crawl analysis delivered live.
+            Streaming vulnerability scanner — headers, TLS, cookies, DNS, WHOIS, OSINT & crawl analysis delivered live.
           </p>
 
           <form onSubmit={startScan} className="relative group max-w-2xl mx-auto">
@@ -192,13 +230,13 @@ export default function Scanner() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                 </svg>
               </div>
-              <input
+               <input
                 id="domain-input"
                 type="text"
                 placeholder="Enter domain (e.g. example.com or https://example.com)"
                 className="flex-1 bg-transparent border-none focus:outline-none text-white placeholder-slate-500 text-sm py-3"
-                value={domain}
-                onChange={e => setDomain(e.target.value)}
+                value={target}
+                onChange={e => setTarget(e.target.value)}
                 disabled={isScanning}
               />
               {isScanning ? (
@@ -207,7 +245,7 @@ export default function Scanner() {
                   Stop
                 </button>
               ) : (
-                <button type="submit" disabled={!domain.trim()}
+                <button type="submit" disabled={!target.trim()}
                   className="flex-shrink-0 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-sky-600/20">
                   Start Scan
                 </button>
@@ -226,13 +264,42 @@ export default function Scanner() {
       {/* ── Body ── */}
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
 
+        {/* Progress Bar */}
+        {(isScanning || isDone) && totalSteps > 0 && (
+          <div className="bg-[#0d111a] border border-slate-800 rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Test Progress</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {isScanning ? `Executing test suite...` : `Audit finished.`}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-2xl font-black text-white">{currentStep}</span>
+                <span className="text-slate-600 font-bold text-sm ml-1">/ {totalSteps}</span>
+              </div>
+            </div>
+            <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-500"
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              />
+            </div>
+            <div className="mt-3 flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-600">
+               <span>Discovery Start</span>
+               <span>{totalSteps - currentStep} Tests Remaining</span>
+               <span>Complete</span>
+            </div>
+          </div>
+        )}
+
         {/* Live Log Console */}
         {(isScanning || logs.length > 0) && (
           <div className="bg-[#0d111a] border border-slate-800 rounded-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-800 bg-black/20">
               {isScanning && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />}
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Live Console</span>
-              <span className="ml-auto text-xs text-slate-600">{results.length} finding(s) so far</span>
+              <span className="ml-auto text-xs text-slate-600">{filteredResults.length} issues(s) found</span>
             </div>
             <div className="h-36 overflow-y-auto p-4 font-mono text-xs text-slate-400 space-y-0.5">
               {logs.map((l, i) => <div key={i}>{l}</div>)}
@@ -245,11 +312,11 @@ export default function Scanner() {
         {results.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
-              { label: 'Risk Score', val: riskScore != null ? `${riskScore}%` : '—', color: riskScore != null && riskScore < 50 ? 'text-rose-400' : riskScore != null && riskScore < 75 ? 'text-amber-400' : 'text-emerald-400' },
+               { label: 'Risk Score', val: riskScore != null ? `${riskScore}%` : '—', color: riskScore != null && riskScore < 50 ? 'text-rose-400' : riskScore != null && riskScore < 75 ? 'text-amber-400' : 'text-emerald-400' },
               { label: 'Vulnerabilities', val: counts.vulnerable, color: 'text-rose-400' },
               { label: 'Warnings', val: counts.warning, color: 'text-amber-400' },
-              { label: 'Passed', val: counts.safe, color: 'text-emerald-400' },
-              { label: 'Total Checks', val: counts.total, color: 'text-sky-400' },
+              { label: 'Completion', val: `${Math.round((currentStep / totalSteps) * 100)}%`, color: 'text-sky-400' },
+              { label: 'Total Checks', val: totalSteps, color: 'text-slate-400' },
             ].map((c, i) => (
               <div key={i} className="bg-[#0d111a] border border-slate-800 rounded-2xl p-5">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">{c.label}</div>
@@ -281,7 +348,7 @@ export default function Scanner() {
                   onChange={e => setStatusFilter(e.target.value)}
                   className="bg-[#111827] border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 ring-sky-500"
                 >
-                  {['All', 'VULNERABLE', 'WARNING', 'SAFE', 'NEUTRAL'].map(s => (
+                  {['All (Critical)', 'VULNERABLE', 'WARNING', 'NEUTRAL'].map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
@@ -345,6 +412,62 @@ export default function Scanner() {
             {filteredResults.length === 0 && (
               <div className="py-12 text-center text-slate-600 text-sm">No results match the current filters.</div>
             )}
+          </div>
+        )}
+
+        {/* ── Crawl Tree Builder ── */}
+        {crawlTree && (
+          <div className="bg-[#0d111a] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl shadow-sky-900/10">
+            <div className="px-6 py-5 border-b border-slate-800 bg-black/20 flex items-center justify-between">
+               <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Discovery Tree & Network Topology
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest mt-1">Found {Object.keys(crawlTree).length} unique nodes during crawl</p>
+               </div>
+               <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Page</span>
+                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-sky-400" /> Subdomain / Static</span>
+                  <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> API / JSON</span>
+               </div>
+            </div>
+            <div className="p-6 overflow-x-auto max-h-[600px] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Object.entries(crawlTree).map(([url, node]) => (
+                  <div key={url} className="bg-slate-900/40 border border-slate-800/60 rounded-2xl p-4 hover:border-sky-500/30 transition-all group">
+                    <div className="flex items-start justify-between mb-3">
+                       <div className="flex items-center gap-2">
+                         <div className={`w-2 h-2 rounded-full ${node.type === 'api' ? 'bg-amber-400' : (node.type === 'js' || url.includes('.') && !url.endsWith('.html')) ? 'bg-sky-400' : 'bg-emerald-400'}`} />
+                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{node.type}</span>
+                       </div>
+                       <div className="text-[10px] text-slate-600 font-mono">{node.children.length} links</div>
+                    </div>
+                    <div className="text-xs font-bold text-slate-200 truncate mb-3 group-hover:text-white transition-colors" title={url}>
+                      {url.replace(/^https?:\/\//, '')}
+                    </div>
+                    {node.children.length > 0 && (
+                      <div className="space-y-1.5 border-t border-slate-800/50 pt-3">
+                        {node.children.slice(0, 4).map((child, idx) => {
+                          const childUrl = child.replace(/^https?:\/\//, '');
+                          return (
+                            <div key={idx} className="flex items-center gap-2 text-[10px] text-slate-500 hover:text-sky-400 transition-colors cursor-default">
+                              <span className="text-slate-700">↳</span>
+                              <span className="truncate">{childUrl.length > 40 ? childUrl.substring(0, 40) + '...' : childUrl}</span>
+                            </div>
+                          );
+                        })}
+                        {node.children.length > 4 && (
+                           <div className="text-[9px] text-slate-600 italic pl-4 font-bold">+ {node.children.length - 4} more connections</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

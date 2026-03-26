@@ -1,3 +1,13 @@
+# ⚠️ LEGAL DISCLAIMER & EDUCATIONAL USE ONLY ⚠️
+
+> **IMPORTANT:** This project is provided strictly for **EDUCATIONAL AND RESEARCH PURPOSES ONLY**. 
+> 
+> The author(s) and contributors of this project **DO NOT assume any responsibility or liability** for any misuse, damage, or illegal activities conducted using this tool. 
+> 
+> **NEVER** use this tool against any target (domain, network, OR IP) without explicit, written authorization from the owner. Unauthorized scanning or testing of networks is illegal and unethical. Use this software at your own risk.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
 ## Project Info
 
