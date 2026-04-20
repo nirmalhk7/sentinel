@@ -9,7 +9,7 @@
  *   ssl | dns | whois | policy | methods | crawl | js
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { VulnerabilityScanner, ScanResult } from '@/utils/vulnerabilityScanner';
+import { SecurityScanner, ScanResult } from '@/utils/securityScanner';
 import axios from 'axios';
 
 const ALLOWED = [
@@ -19,7 +19,7 @@ const ALLOWED = [
 ] as const;
 type Check = typeof ALLOWED[number];
 
-async function fetchInitial(scanner: VulnerabilityScanner) {
+async function fetchInitial(scanner: SecurityScanner) {
   return axios.get(scanner.url, {
     validateStatus: () => true, maxRedirects: 5, timeout: 10000,
     headers: { 'User-Agent': 'Mozilla/5.0 SecurityAuditor/2.0' },
@@ -38,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const collected: ScanResult[] = [];
-  const scanner = new VulnerabilityScanner(domain, r => collected.push(r));
+  const scanner = new SecurityScanner(domain, r => collected.push(r));
 
   try {
     const needsHttp: Check[] = ['fingerprint', 'headers', 'passive-headers', 'cookies', 'caching', 'waf'];

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sentinel history
+.github_scan_history.json
+.scan_history.json
+temp.json

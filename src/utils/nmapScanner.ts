@@ -21,7 +21,7 @@ export interface NmapHost {
 }
 
 /** 
- * NmapScanner - Passive Vulnerability Discovery Edition
+ * NmapScanner - Passive Security Discovery Edition
  * Strictly uses non-intrusive packets for service discovery and CVE mapping.
  */
 export class NmapScanner {
@@ -99,7 +99,7 @@ export class NmapScanner {
 
   /** 
    * Local Network Aggressive Audit 
-   * Uses ALL possible features for deep vulnerability assessment on local/private networks.
+   * Uses ALL possible features for deep security risk assessment on local/private networks.
    */
   public async localAudit(): Promise<NmapHost[]> {
     return this.parseNmapOutput(await this.runNmap([

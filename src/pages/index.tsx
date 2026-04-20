@@ -166,8 +166,8 @@ export default function Scanner() {
   return (
     <div className="min-h-screen bg-[#07090f] text-slate-200" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       <Head>
-        <title>HackLab | Vulnerability Scanner</title>
-        <meta name="description" content="Real-time 40-point web vulnerability and OSINT scanner." />
+        <title>Sentinel | Security Scanner</title>
+        <meta name="description" content="Real-time 40-point web security and intelligence assessment tool." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" />
       </Head>
@@ -177,9 +177,9 @@ export default function Scanner() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-sky-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-600/20">
-               <span className="text-white font-black text-xl">H</span>
+               <span className="text-white font-black text-xl">S</span>
             </div>
-            <span className="text-white font-bold tracking-tight">HACKLAB <span className="text-sky-500">PRO</span></span>
+            <span className="text-white font-bold tracking-tight">SENTINEL <span className="text-sky-500">PRO</span></span>
           </div>
           <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
             <button 
@@ -192,6 +192,12 @@ export default function Scanner() {
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Local Network
+            </a>
+            <a 
+              href="/github"
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
+            >
+              GitHub Scan
             </a>
           </div>
           <div className="hidden md:flex items-center gap-4">
@@ -210,14 +216,14 @@ export default function Scanner() {
         <div className="relative z-10 max-w-4xl mx-auto px-6 pt-20 pb-16 text-center">
           <div className="inline-flex items-center gap-2 bg-sky-500/10 border border-sky-400/20 text-sky-400 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            Multi-Point Security Audit + OSINT
+            Multi-Point Security Audit + Intelligence
           </div>
  
           <h1 className="text-5xl font-black mb-4 leading-tight" style={{ background: 'linear-gradient(135deg, #fff 0%, #93c5fd 50%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Website Audit
+            Security Assessment
           </h1>
           <p className="text-slate-400 text-base max-w-xl mx-auto mb-10">
-            Streaming vulnerability scanner — headers, TLS, cookies, DNS, WHOIS, OSINT & crawl analysis delivered live.
+            Streaming security analyzer — headers, TLS, cookies, DNS, WHOIS & crawl analysis delivered live.
           </p>
 
           <form onSubmit={startScan} className="relative group max-w-2xl mx-auto">
@@ -312,8 +318,8 @@ export default function Scanner() {
         {results.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
-               { label: 'Risk Score', val: riskScore != null ? `${riskScore}%` : '—', color: riskScore != null && riskScore < 50 ? 'text-rose-400' : riskScore != null && riskScore < 75 ? 'text-amber-400' : 'text-emerald-400' },
-              { label: 'Vulnerabilities', val: counts.vulnerable, color: 'text-rose-400' },
+               { label: 'Security Score', val: riskScore != null ? `${riskScore}%` : '—', color: riskScore != null && riskScore < 50 ? 'text-rose-400' : riskScore != null && riskScore < 75 ? 'text-amber-400' : 'text-emerald-400' },
+              { label: 'Security Risks', val: counts.vulnerable, color: 'text-rose-400' },
               { label: 'Warnings', val: counts.warning, color: 'text-amber-400' },
               { label: 'Completion', val: `${Math.round((currentStep / totalSteps) * 100)}%`, color: 'text-sky-400' },
               { label: 'Total Checks', val: totalSteps, color: 'text-slate-400' },
@@ -331,7 +337,7 @@ export default function Scanner() {
           <div className="bg-[#0d111a] border border-slate-800 rounded-3xl overflow-hidden">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-slate-800 bg-black/20">
-              <span className="text-sm font-bold text-white">Findings</span>
+              <span className="text-sm font-bold text-white">Security Results</span>
               <div className="ml-auto flex flex-wrap gap-2">
                 {/* Category filter */}
                 <select
@@ -484,7 +490,7 @@ export default function Scanner() {
       </div>
 
       <footer className="border-t border-slate-900 py-10 text-center">
-        <p className="text-slate-700 text-xs">Security Audit Lab &mdash; for authorised security research only.</p>
+        <p className="text-slate-700 text-xs">Sentinel Security Audit Lab &mdash; for authorised security research only.</p>
       </footer>
     </div>
   );

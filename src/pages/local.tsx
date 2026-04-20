@@ -151,18 +151,39 @@ export default function LocalScanner() {
   return (
     <div className="min-h-screen bg-[#07090f] text-slate-200" style={{ fontFamily: '"Inter", system-ui, sans-serif' }}>
       <Head>
-        <title>Internal Audit | HackLab</title>
+        <title>Internal Audit | Sentinel</title>
       </Head>
 
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#07090f]/80 backdrop-blur-md border-b border-slate-800/60">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="w-8 h-8 bg-sky-600 rounded-lg flex items-center justify-center shadow-lg shadow-sky-600/20">
-               <span className="text-white font-black text-xl">H</span>
+               <span className="text-white font-black text-xl">S</span>
             </div>
-            <span className="text-white font-bold tracking-tight uppercase">HackLab <span className="text-sky-500">Internal</span></span>
+            <span className="text-white font-bold tracking-tight">SENTINEL <span className="text-sky-500">PRO</span></span>
           </div>
-          <a href="/" className="text-slate-500 hover:text-white text-xs font-bold transition uppercase tracking-widest">Back to Web Audit</a>
+          <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
+            <a 
+              href="/"
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
+            >
+              Website Audit
+            </a>
+            <button 
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white cursor-default`}
+            >
+              Local Network
+            </button>
+            <a 
+              href="/github"
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
+            >
+              GitHub Scan
+            </a>
+          </div>
+          <div className="hidden md:flex items-center gap-4">
+             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Version 2.4.0</span>
+          </div>
         </div>
       </nav>
 
@@ -170,10 +191,10 @@ export default function LocalScanner() {
         <div className="absolute inset-0 pointer-events-none opacity-10 bg-[url('/audit-header.png')] bg-cover grayscale" />
         <div className="max-w-4xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full mb-6">
-            Aggressive Local Audit Mode
+            Deep Internal Audit Mode
           </div>
           <h1 className="text-6xl font-black mb-4 tracking-tighter text-white">INTERNAL AUDIT</h1>
-          <p className="text-slate-400 max-w-xl mx-auto mb-10 text-sm">Aggressive network discovery and vulnerability mapping for private ranges.</p>
+          <p className="text-slate-400 max-w-xl mx-auto mb-10 text-sm">Enhanced network discovery and security assessment for private ranges.</p>
 
           <form onSubmit={startScan} className="max-w-2xl mx-auto flex gap-2 bg-slate-900/50 p-2 rounded-2xl border border-slate-800 focus-within:border-sky-500 transition-all shadow-2xl">
             <input 
@@ -216,7 +237,7 @@ export default function LocalScanner() {
         {(isScanning || logs.length > 0) && (
           <div className="bg-black border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
             <div className="bg-slate-900/50 px-5 py-2 border-b border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Scanner Logs
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Audit Logs
             </div>
             <div className="h-40 overflow-y-auto p-4 font-mono text-[11px] text-slate-400 space-y-0.5 scrollbar-thin scrollbar-thumb-slate-800">
                {logs.map((l, i) => <div key={i}>{l}</div>)}
@@ -228,7 +249,7 @@ export default function LocalScanner() {
         {results.length > 0 && (
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
              <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-black/20">
-                <span className="text-xs font-black uppercase tracking-widest text-white">Vulnerability Findings</span>
+                <span className="text-xs font-black uppercase tracking-widest text-white">Audit Results</span>
                 <div className="flex gap-2">
                    <select value={filter} onChange={e => setFilter(e.target.value)} className="bg-slate-950 border border-slate-800 text-[10px] uppercase font-bold text-slate-400 px-3 py-1.5 rounded-lg outline-none">
                       <option value="All">All Categories</option>
@@ -274,7 +295,7 @@ export default function LocalScanner() {
       </div>
 
       <footer className="py-20 text-center opacity-30">
-        <p className="text-xs font-black uppercase tracking-widest tracking-widest">HackLab Proprietary Internal Audit Engine v2.4</p>
+        <p className="text-xs font-black uppercase tracking-widest tracking-widest">Sentinel Internal Audit Engine v2.4</p>
       </footer>
     </div>
   );

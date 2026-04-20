@@ -11,6 +11,7 @@ const traceroute = require('traceroute');
 const Wappalyzer = require('simple-wappalyzer');
 const linkCheck = require('link-check');
 const browserless = require('browserless');
+import puppeteer from 'puppeteer-core';
 import { NmapScanner } from './nmapScanner';
 import { ScanLimiter } from './scanLimiter';
 
@@ -106,7 +107,7 @@ async function safePost(url: string, data?: any, opts?: any) {
 // Scanner
 // ─────────────────────────────────────────────
 
-export class VulnerabilityScanner {
+export class SecurityScanner {
   readonly url: string;
   readonly domain: string;
   private visitedUrls = new Set<string>();
@@ -684,7 +685,7 @@ export class VulnerabilityScanner {
       id: 25, category: 'Policy Files', feature: 'security.txt',
       status: sec?.status === 200 ? 'SAFE' : 'WARNING',
       description: sec?.status === 200 ? 'security.txt found.' : 'security.txt missing.',
-      finding: sec?.status === 200 ? 'Vulnerability disclosure policy in place.' : 'No responsible disclosure policy found.',
+      finding: sec?.status === 200 ? 'Security disclosure policy in place.' : 'No responsible disclosure policy found.',
       remediation: 'Add /.well-known/security.txt per RFC 9116.',
     }));
 
@@ -1607,7 +1608,7 @@ export class VulnerabilityScanner {
             id: 131, category: 'Active Probing', feature: 'Confirmed Open Redirect',
             status: 'VULNERABLE',
             description: `Redirected to external site via param: ${p}`,
-            finding: 'Active Open Redirect vulnerability confirmed!',
+            finding: 'Active Open Redirect issue confirmed!',
             remediation: 'Whitelist allowed redirect targets or use relative paths.'
           }));
         }
@@ -1723,7 +1724,7 @@ export class VulnerabilityScanner {
       const payload = JSON.parse(Buffer.from(payloadB64, 'base64').toString());
 
       if (header.alg === 'none') {
-        results.push(this.emit({ id: 630, category: 'API Security', feature: 'JWT alg: none Vulnerability', status: 'VULNERABLE', description: `Insecure JWT found in ${source}`, finding: 'JWT algorithm is set to "none" — allow signature bypass.', remediation: 'Strictly enforce strong signing algorithms like RS256/HS256.' }));
+        results.push(this.emit({ id: 630, category: 'API Security', feature: 'JWT alg: none Issue', status: 'VULNERABLE', description: `Insecure JWT found in ${source}`, finding: 'JWT algorithm is set to "none" — allow signature bypass.', remediation: 'Strictly enforce strong signing algorithms like RS256/HS256.' }));
       }
 
       if (payload.admin || payload.role === 'admin' || payload.is_admin) {
@@ -1945,7 +1946,7 @@ export class VulnerabilityScanner {
           id: 601, category: 'Active Probing', feature: 'SQL Error Probe',
           status: 'VULNERABLE',
           description: `SQL syntax error triggered via parameter manipulation.`,
-          finding: 'Possible SQL Injection vulnerability detected.',
+          finding: 'Possible SQL Injection risk detected.',
           remediation: 'Use parameterized queries / prepared statements for all DB interactions.'
         }));
       }
@@ -1968,7 +1969,7 @@ export class VulnerabilityScanner {
             id: p.id, category: 'Active Probing', feature: p.name,
             status: 'VULNERABLE',
             description: `Payload "${p.payload}" reflected/executed in response.`,
-            finding: `${p.name} vulnerability detected!`,
+            finding: `${p.name} issue detected!`,
             remediation: 'Sanitize and validate all user-supplied input before use in sensitive operations.'
           }));
         }
@@ -2055,7 +2056,7 @@ export class VulnerabilityScanner {
       'spring-core': { version: '5.3.17', vuln: 'Spring4Shell (CVE-2022-22965)', remediation: 'Upgrade to Spring >= 5.3.18' },
       'log4j-core': { version: '2.14.1', vuln: 'Log4Shell (CVE-2021-44228)', remediation: 'Upgrade to Log4j >= 2.15.0' },
       'fastjson': { version: '1.2.80', vuln: 'RCE via Deserialization', remediation: 'Upgrade to Fastjson >= 1.2.83' },
-      'next': { version: '12.0.0', vuln: 'SSR Vulnerability', remediation: 'Upgrade to Next.js >= 12.1.0' },
+      'next': { version: '12.0.0', vuln: 'SSR Issue', remediation: 'Upgrade to Next.js >= 12.1.0' },
     };
 
     for (const { path, type } of files) {
@@ -2087,12 +2088,23 @@ export class VulnerabilityScanner {
 
   async checkDynamicAnalysis(): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
-    if (!browserless) return results;
-
+    
     let browserInstance = null;
+    let browserContext = null;
+    let page = null;
+    
     try {
-      browserInstance = browserless();
-      const page = await browserInstance.page();
+      if (process.env.BROWSERLESS_URL) {
+        // Connect to an external remote browserless/puppeteer instance
+        browserContext = await puppeteer.connect({ browserWSEndpoint: process.env.BROWSERLESS_URL });
+        page = await browserContext.newPage();
+      } else {
+        // Fallback to local browserless package instance
+        if (!browserless) return results;
+        browserInstance = browserless();
+        page = await browserInstance.page();
+      }
+      
       await page.goto(this.url, { waitUntil: 'networkidle2', timeout: 30000 });
       
       const content = await page.content();
@@ -2119,11 +2131,17 @@ export class VulnerabilityScanner {
       results.push(this.emit({
         id: 950, category: 'Dynamic Analysis', feature: 'Headless Probe Failed',
         status: 'NEUTRAL',
-        description: `Browserless error: ${e.message}`,
-        finding: 'Could not perform dynamic DOM analysis.'
+        description: `Error: ${e.message}`,
+        finding: 'Could not perform dynamic DOM analysis. Ensure BROWSERLESS_URL is valid or Chromium is installed locally.'
       }));
     } finally {
-      if (browserInstance) {
+      if (page && browserContext) {
+         try { await page.close(); } catch { }
+      }
+      if (browserContext && process.env.BROWSERLESS_URL) {
+         try { await browserContext.disconnect(); } catch { }
+      }
+      if (browserInstance && !process.env.BROWSERLESS_URL) {
          try { await browserInstance.destroy(); } catch { }
       }
     }

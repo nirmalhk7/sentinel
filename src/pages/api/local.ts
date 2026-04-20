@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 type: 'result',
                 payload: {
                    id: 11000 + Math.floor(Math.random() * 9000),
-                   category: 'Vulnerability Script',
+                   category: 'Security Script',
                    feature: `${sid} on ${host.address}:${p.portid}`,
                    status,
                    description: output.substring(0, 1000),

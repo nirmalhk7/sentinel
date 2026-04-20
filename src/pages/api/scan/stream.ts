@@ -11,7 +11,7 @@
  *   { type: 'error',    message: string }
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { VulnerabilityScanner } from '@/utils/vulnerabilityScanner';
+import { SecurityScanner } from '@/utils/securityScanner';
 import axios from 'axios';
 
 export const config = { api: { responseLimit: false } };
@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     send({ type: 'progress', message, current, total });
 
   console.log(`\x1b[34m[SCAN START] Initiating security audit for: ${domain}\x1b[0m`);
-  const scanner = new VulnerabilityScanner(
+  const scanner = new SecurityScanner(
     domain,
     result => send({ type: 'result', payload: result }),
     { maxPages: typeof maxPages === 'number' ? maxPages : 25 },

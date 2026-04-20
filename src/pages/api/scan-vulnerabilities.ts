@@ -4,7 +4,7 @@
  * For real-time streaming use /api/scan/stream instead.
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { VulnerabilityScanner, ScanResult } from '@/utils/vulnerabilityScanner';
+import { SecurityScanner, ScanResult } from '@/utils/securityScanner';
 import axios from 'axios';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!domain || typeof domain !== 'string') return res.status(400).json({ error: 'domain required' });
 
   const collected: ScanResult[] = [];
-  const scanner = new VulnerabilityScanner(domain, r => collected.push(r), { maxPages: 25 });
+  const scanner = new SecurityScanner(domain, r => collected.push(r), { maxPages: 25 });
 
   try {
     const result = await scanner.runFullScan();
