@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 
 interface ScanResult {
   id: number;
@@ -27,9 +28,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; 
   NEUTRAL:    { bg: 'bg-slate-500/10',   text: 'text-slate-400',   border: 'border-slate-600/30',   dot: 'bg-slate-500' },
 };
 
-const CATEGORIES = ['All', 'Software Identification', 'Header Security', 'Cookie Security', 'TLS/SSL',
-  'DNS Recon', 'WHOIS / Registrar', 'Information Disclosure', 'Policy Files',
-  'Protocol & Methods', 'API & CORS', 'Caching', 'Client-Side', 'Content Analysis', 'Miscellaneous'];
+
 
 export default function Scanner() {
   const [target, setTarget] = useState('');
@@ -124,8 +123,8 @@ export default function Scanner() {
             } catch {}
           }
         }
-      } catch (e: any) {
-        if (e.name !== 'AbortError') setError(e.message);
+      } catch {
+        setError('Connection lost');
       } finally {
         setIsScanning(false);
         setIsDone(true);
@@ -187,18 +186,18 @@ export default function Scanner() {
             >
               Website Audit
             </button>
-            <a 
+            <Link 
               href="/local"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Local Network
-            </a>
-            <a 
+            </Link>
+            <Link 
               href="/github"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               GitHub Scan
-            </a>
+            </Link>
           </div>
           <div className="hidden md:flex items-center gap-4">
              <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Version 2.4.0</span>
@@ -209,7 +208,7 @@ export default function Scanner() {
       {/* ── Hero ── */}
       <div className="relative overflow-hidden border-b border-slate-800/60 pt-16">
         <div className="absolute inset-0 pointer-events-none">
-          <img src="/audit-header.png" alt="" className="w-full h-full object-cover opacity-15 blur-sm" />
+          <div className="w-full h-full opacity-15 blur-sm bg-slate-900" />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, #07090f 0%, transparent 40%, #07090f 100%)' }} />
         </div>
 

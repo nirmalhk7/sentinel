@@ -1,17 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { promises as dns } from 'dns';
 import { URL } from 'url';
 import * as tldts from 'tldts';
 
-const sslChecker = require('ssl-checker');
-const whois = require('whois');
-const forge = require('node-forge');
-const traceroute = require('traceroute');
-const Wappalyzer = require('simple-wappalyzer');
-const linkCheck = require('link-check');
-const browserless = require('browserless');
-import puppeteer from 'puppeteer-core';
+import sslChecker from 'ssl-checker';
+import whois from 'whois';
+import forge from 'node-forge';
+import traceroute from 'traceroute';
+import Wappalyzer from 'simple-wappalyzer';
+import linkCheck from 'link-check';
+import browserless from 'browserless';
+import puppeteer, { Browser, Page } from 'puppeteer-core';
 import { NmapScanner } from './nmapScanner';
 import { ScanLimiter } from './scanLimiter';
 
@@ -62,7 +63,7 @@ export interface CrawlNode {
 // Helper
 // ─────────────────────────────────────────────
 
-async function stealthRequest(method: 'GET' | 'POST', url: string, opts?: any) {
+async function stealthRequest(method: 'GET' | 'POST', url: string, opts?: import('axios').AxiosRequestConfig) {
   try {
     // Randomized stealth delay
     await stealthDelay();
@@ -93,11 +94,11 @@ async function stealthRequest(method: 'GET' | 'POST', url: string, opts?: any) {
   }
 }
 
-async function safeGet(url: string, opts?: any) {
+async function safeGet(url: string, opts?: import('axios').AxiosRequestConfig) {
   return await stealthRequest('GET', url, opts);
 }
 
-async function safePost(url: string, data?: any, opts?: any) {
+async function safePost(url: string, data?: unknown, opts?: import('axios').AxiosRequestConfig) {
   return await stealthRequest('POST', url, { data, ...opts });
 }
 
@@ -172,7 +173,7 @@ export class SecurityScanner {
   }
 
   // ── runStepWithTimeout ──────────────────────
-  private async runStepWithTimeout(label: string, task: Promise<any>) {
+  private async runStepWithTimeout(label: string, task: Promise<unknown>) {
     const timeoutMs = 10000;
     let timeoutId: any;
     const timeoutPromise = new Promise((_, reject) => {
@@ -184,14 +185,15 @@ export class SecurityScanner {
     try {
       await Promise.race([task, timeoutPromise]);
       clearTimeout(timeoutId);
-    } catch (e: any) {
+    } catch (e: unknown) {
       clearTimeout(timeoutId);
-      console.warn(`\x1b[33m[TIMEOUT/ERROR] ${e.message}\x1b[0m`);
+      const error = e as Error;
+      console.warn(`\x1b[33m[TIMEOUT/ERROR] ${error.message}\x1b[0m`);
     }
   }
 
   // ── emit ──────────────────────────────────
-  private emit(r: ScanResult) {
+  private emit(r: ScanResult): ScanResult {
     const color = r.status === 'VULNERABLE' ? '\x1b[31m' : (r.status === 'WARNING' ? '\x1b[33m' : '\x1b[32m');
     console.log(`  └─ [${color}${r.status}\x1b[0m] ${r.category}: ${r.feature}`);
     this.onResult?.(r);
@@ -201,7 +203,7 @@ export class SecurityScanner {
   // ═════════════════════════════════════════
   // 1. Software & Server Fingerprinting (#1-3, #39)
   // ═════════════════════════════════════════
-  async checkSoftwareFingerprint(res: any): Promise<ScanResult[]> {
+  async checkSoftwareFingerprint(res: import('axios').AxiosResponse): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
 
     const server = res.headers['server'];
@@ -284,7 +286,7 @@ export class SecurityScanner {
   // ═════════════════════════════════════════
   // 2. Security Headers (#4-9)
   // ═════════════════════════════════════════
-  async checkSecurityHeaders(res: any): Promise<ScanResult[]> {
+  async checkSecurityHeaders(res: import('axios').AxiosResponse): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
     const h = res.headers;
 
@@ -350,7 +352,7 @@ export class SecurityScanner {
   // ═════════════════════════════════════════
   // 3. Cookie Security (#10-11, #35)
   // ═════════════════════════════════════════
-  async checkCookieSecurity(res: any): Promise<ScanResult[]> {
+  async checkCookieSecurity(res: import('axios').AxiosResponse): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
     const rawCookies: string[] = res.headers['set-cookie'] || [];
 
@@ -463,11 +465,12 @@ export class SecurityScanner {
         finding: `Connection to ${host} succeeded with modern TLS. Run nmap --script ssl-enum-ciphers for full cipher audit.`,
         remediation: 'Disable TLS 1.0/1.1 and RC4/3DES ciphers on the server.',
       }));
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const error = e as Error;
       results.push(this.emit({
         id: 12, category: 'TLS/SSL', feature: 'Certificate Validity',
         status: 'VULNERABLE',
-        description: `SSL check error: ${e.message}`,
+        description: `SSL check error: ${error.message}`,
         finding: 'Could not verify certificate – likely invalid.',
         remediation: 'Check certificate chain and intermediate CA configuration.',
       }));
@@ -590,7 +593,7 @@ export class SecurityScanner {
     const results: ScanResult[] = [];
     try {
       const data: string = await new Promise<string>((res, rej) =>
-        whois.lookup(this.domain, (err: Error, d: string) => err ? rej(err) : res(d))
+        whois.lookup(this.domain, (err: Error | null, d: string) => err ? rej(err) : res(d))
       );
 
       const expiry = data.match(/Expir(?:es?|y Date|ation Date):\s*(.+)/i)?.[1]?.trim();
@@ -624,11 +627,12 @@ export class SecurityScanner {
         remediation: 'Enable registrar WHOIS privacy to prevent PII exposure.',
       }));
 
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const error = e as Error;
       results.push(this.emit({
         id: 48, category: 'WHOIS / Registrar', feature: 'Domain Expiry',
         status: 'NEUTRAL',
-        description: `WHOIS lookup failed: ${e.message}`,
+        description: `WHOIS lookup failed: ${error.message}`,
         finding: 'Could not fetch WHOIS data.',
       }));
     }
@@ -770,7 +774,7 @@ export class SecurityScanner {
   // ═════════════════════════════════════════
   // 9. Performance / Caching Headers (#26-27)
   // ═════════════════════════════════════════
-  async checkCachingHeaders(res: any): Promise<ScanResult[]> {
+  async checkCachingHeaders(res: import('axios').AxiosResponse): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
     const h = res.headers;
 
@@ -845,7 +849,7 @@ export class SecurityScanner {
       await this.checkAssetMetadataDisclosure(body, currentUrl);
       await this.checkWebSocket(body, currentUrl);
       await this.checkPostmessageSecurity(body, currentUrl);
-      await this.checkAdvancedCORS(currentUrl, headers);
+      await this.checkAdvancedCORS(currentUrl, headers as Record<string, string | string[]>);
 
       if (body.includes('<title>Index of /') || body.includes('Directory listing for')) {
         results.push(this.emit({ id: 17, category: 'Information Disclosure', feature: `Directory Listing: ${currentUrl}`, status: 'VULNERABLE', description: 'Apache/nginx auto-index page detected.', finding: 'Exposes full file tree to the public.', remediation: 'Set Options -Indexes (Apache) or autoindex off (nginx).' }));
@@ -959,7 +963,7 @@ export class SecurityScanner {
             } else {
               // External Link: Check for Broken Link Hijacking
               if (absoluteObj.hostname.match(/(facebook|twitter|instagram|linkedin|github|youtube|medium|heroku|vercel|netlify|s3\.amazonaws)\.com/i)) {
-                linkCheck(absolute, (err: any, result: any) => {
+                linkCheck(absolute, (err: Error | null, result: { status: string; statusCode?: number }) => {
                   if (result && result.status === 'dead') {
                     this.emit({
                       id: 132, category: 'Resource Health', feature: 'Broken Link Hijacking',
@@ -1017,7 +1021,7 @@ export class SecurityScanner {
   // ═════════════════════════════════════════
   // 11. Passive Response Header Intel (new)
   // ═════════════════════════════════════════
-  async checkPassiveHeaders(res: any): Promise<ScanResult[]> {
+  async checkPassiveHeaders(res: import('axios').AxiosResponse): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
     const h = res.headers;
 
@@ -1160,7 +1164,7 @@ export class SecurityScanner {
   // 13. Advanced Discovery Methods
   // ═════════════════════════════════════════
 
-  async analyzeThirdPartySaaS(res: any): Promise<ScanResult[]> {
+  async analyzeThirdPartySaaS(res: import('axios').AxiosResponse): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
     const body = typeof res.data === 'string' ? res.data : '';
     const h = res.headers;
@@ -1248,7 +1252,7 @@ export class SecurityScanner {
     return results;
   }
 
-  async checkWAF(res: any): Promise<ScanResult[]> {
+  async checkWAF(res: import('axios').AxiosResponse): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
     const h = res.headers;
     const wafsigs = [
@@ -1369,8 +1373,9 @@ export class SecurityScanner {
           }));
         }
       }
-    } catch (e: any) {
-      results.push(this.emit({ id: 199, category: 'Infrastructure', feature: 'Nmap Port Scan Failed', status: 'NEUTRAL', description: e.message, finding: 'Falling back to socket-based scan.' }));
+    } catch (e: unknown) {
+      const error = e as Error;
+      results.push(this.emit({ id: 199, category: 'Infrastructure', feature: 'Nmap Port Scan Failed', status: 'NEUTRAL', description: error.message, finding: 'Falling back to socket-based scan.' }));
     }
 
     return results;
@@ -1640,7 +1645,7 @@ export class SecurityScanner {
     return results;
   }
 
-  async checkAdvancedCORS(currentUrl: string, originalHeaders: any): Promise<ScanResult[]> {
+  async checkAdvancedCORS(currentUrl: string, headers: Record<string, string | string[]>): Promise<ScanResult[]> {
     const results: ScanResult[] = [];
     
     // 1. Origin: null Reflection
@@ -1816,7 +1821,7 @@ export class SecurityScanner {
     if (this.domain === 'localhost' || this.domain === '127.0.0.1') return results;
 
     return new Promise((resolve) => {
-      traceroute.trace(this.domain, (err: any, hops: any) => {
+      traceroute.trace(this.domain, (err: Error | null, hops: string[] | undefined) => {
         if (!err && hops) {
           const hopSummary = Object.keys(hops).map(ip => ip).join(' -> ');
           results.push(this.emit({
@@ -1838,8 +1843,9 @@ export class SecurityScanner {
       const { data } = (await safeGet(`https://crt.sh/?q=%25.${this.domain}&output=json`, { timeout: 8000 })) || { data: null };
       if (Array.isArray(data)) {
         const uniqueSubdomains = new Set<string>();
-        data.forEach((entry: any) => {
-          const names = entry.common_name.split('\n');
+        data.forEach((entry: unknown) => {
+          const e = entry as { common_name: string };
+          const names = e.common_name.split('\n');
           names.forEach((name: string) => {
             if (name.endsWith(this.domain) && name !== this.domain && !name.startsWith('*')) {
               uniqueSubdomains.add(name);
@@ -2127,11 +2133,12 @@ export class SecurityScanner {
         }));
       }
 
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const error = e as Error;
       results.push(this.emit({
         id: 950, category: 'Dynamic Analysis', feature: 'Headless Probe Failed',
         status: 'NEUTRAL',
-        description: `Error: ${e.message}`,
+        description: `Error: ${error.message}`,
         finding: 'Could not perform dynamic DOM analysis. Ensure BROWSERLESS_URL is valid or Chromium is installed locally.'
       }));
     } finally {
@@ -2204,8 +2211,8 @@ export class SecurityScanner {
     
     // Define steps first to get the count
     const baseSteps = [
-      { label: 'Fingerprinting software & banners…', fn: (res: any) => this.checkSoftwareFingerprint(res) },
-      { label: 'Detect WAF & infrastructure…', fn: (res: any) => this.checkWAF(res) },
+      { label: 'Fingerprinting software & banners…', fn: (res: import('axios').AxiosResponse) => this.checkSoftwareFingerprint(res) },
+      { label: 'Detect WAF & infrastructure…', fn: (res: import('axios').AxiosResponse) => this.checkWAF(res) },
       { label: 'Mapping network topology…', fn: () => this.checkTraceroute() },
       { label: 'Scanning network ports & services (Passive)…', fn: () => this.checkPorts() },
       { label: 'Running passive CVE & version mapping…', fn: () => this.checkAdvancedNmapVulns() },
@@ -2217,10 +2224,10 @@ export class SecurityScanner {
           return this.checkCloudBuckets();
       }},
       { label: 'Performing dynamic DOM analysis…', fn: () => this.checkDynamicAnalysis() },
-      { label: 'Auditing security headers…', fn: (res: any) => this.checkSecurityHeaders(res) },
-      { label: 'Checking passive / info-leak headers…', fn: (res: any) => this.checkPassiveHeaders(res) },
-      { label: 'Inspecting cookies…', fn: (res: any) => this.checkCookieSecurity(res) },
-      { label: 'Checking caching directives…', fn: (res: any) => this.checkCachingHeaders(res) },
+      { label: 'Auditing security headers…', fn: (res: import('axios').AxiosResponse) => this.checkSecurityHeaders(res) },
+      { label: 'Checking passive / info-leak headers…', fn: (res: import('axios').AxiosResponse) => this.checkPassiveHeaders(res) },
+      { label: 'Inspecting cookies…', fn: (res: import('axios').AxiosResponse) => this.checkCookieSecurity(res) },
+      { label: 'Checking caching directives…', fn: (res: import('axios').AxiosResponse) => this.checkCachingHeaders(res) },
       { label: 'Validating TLS/SSL certificate…', fn: () => this.checkSSL() },
       { label: 'Running DNS recon…', fn: () => this.checkDNS() },
       { label: 'Fetching WHOIS / registrar data…', fn: () => this.checkWhois() },
@@ -2244,7 +2251,7 @@ export class SecurityScanner {
         const step = baseSteps[i];
         progress(step.label, i + 1, totalSteps);
         // Pass initialRes if required by the function (fingerprint, waf, headers, cookies, caching)
-        const fn: any = step.fn;
+        const fn = step.fn as (...args: unknown[]) => Promise<unknown>;
         await this.runStepWithTimeout(step.label, fn.length > 0 ? fn(initialRes) : fn());
     }
 

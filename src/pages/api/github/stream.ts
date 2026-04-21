@@ -7,7 +7,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const sendResult = (result: any) => {
+  const sendResult = (result: import('@/utils/githubScanner').GitHubEnvResult) => {
     res.write(`data: ${JSON.stringify(result)}\n\n`);
   };
 

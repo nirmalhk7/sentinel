@@ -38,6 +38,7 @@ export class GitHubScanner extends EventEmitter {
   private isMonitoring = false;
 
   constructor() {
+    super();
     this.loadProxies();
     this.startBackgroundMonitor();
   }
@@ -119,7 +120,7 @@ export class GitHubScanner extends EventEmitter {
     for (const query of queries) {
       try {
         const proxy = this.getProxy();
-        const config: any = {
+        const config: import('axios').AxiosRequestConfig = {
           params: {
             q: query,
             per_page: 15,
@@ -178,8 +179,9 @@ export class GitHubScanner extends EventEmitter {
         // Sleep to avoid rate limiting
         await new Promise(r => setTimeout(r, 3000));
 
-      } catch (e: any) {
-        console.error(`[GITHUB SCAN ERROR] Query "${query}" failed:`, e.message);
+      } catch (e: unknown) {
+        const error = e as Error;
+        console.error(`[GITHUB SCAN ERROR] Query "${query}" failed:`, error.message);
       }
     }
 

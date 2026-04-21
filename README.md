@@ -1,145 +1,121 @@
-# Sentinel | Professional Security Audit & Intelligence Station
+<div align="center">
+  <img src="https://raw.githubusercontent.com/nirmalhk7/sentinel/main/public/logo.png" alt="Sentinel Logo" width="120" />
+  <h1>SENTINEL</h1>
+  <p><strong>Professional-Grade Security Audit & Intelligence Station</strong></p>
 
-Sentinel is a comprehensive security auditing platform designed for professional researchers, system administrators, and security teams. It provides real-time insights into web security postures, internal network configurations, and repository exposure risks.
+  <p>
+    <img src="https://img.shields.io/badge/Status-Active-success?style=for-the-badge" alt="Status" />
+    <img src="https://img.shields.io/badge/License-FOSS-blue?style=for-the-badge" alt="License" />
+    <img src="https://img.shields.io/badge/Built%20With-Next.js-black?style=for-the-badge" alt="Built With" />
+  </p>
 
-## 🛡️ Responsible Use Policy
-
-Sentinel is developed for ethical security research and authorized audits. By using this software, you agree to:
-- Only perform assessments on systems and networks where you have explicit, written authorization.
-- Adhere to the principles of responsible disclosure.
-- Comply with all local and international data protection and computer misuse laws.
-
-**Disclaimer:** The authors of Sentinel are not responsible for any damage caused by unauthorized use or misconfiguration of this tool. Use of this software signifies your agreement to these terms.
-
----
-
-## 🚀 Key Features
-
-- **Security Assessment**: Live analysis of web headers, TLS/SSL configurations, cookie security, and domain policy (DMARC/SPF/WHOIS).
-- **Internal Audit**: Deep network discovery and security risk mapping for private infrastructure.
-- **Exposure Monitor**: Automated monitoring of repositories for potentially exposed credentials and environment configurations.
-- **Intelligence Suite**: Real-time crawling and network topology discovery to identify hidden assets and risks.
+  <h4>The unified security dashboard for modern infrastructure audits.</h4>
+</div>
 
 ---
 
-## 🛠️ Getting Started
+## 📖 Overview
 
-First, install dependencies:
+**Sentinel** is an open-source security auditing platform designed for professional security researchers, system administrators, and DevSecOps teams. It consolidates multiple scanning methodologies—from deep network discovery to repository exposure monitoring—into a single, high-performance dashboard.
 
-```bash
-npm install
-```
+Whether you are auditing internal networks, verifying public-facing configurations, or monitoring repository hygiene, Sentinel provides the real-time intelligence needed to maintain a robust security posture.
 
-Then, run the development server:
+---
 
-```bash
-npm run dev
-```
+## ✨ Key Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to access the dashboard.
+### 🔍 Security Assessment (DAST)
+- **Header Analysis**: Real-time evaluation of security headers (CSP, HSTS, X-Frame-Options).
+- **SSL/TLS Auditing**: Comprehensive certificates and cipher suite validation via Nmap & OpenSSL.
+- **Dynamic DOM Probing**: Headless Chromium integration to detect client-side vulnerabilities in rendered JavaScript.
+- **Protocol Policy**: Automated checks for SPF, DMARC, and WHOIS registration data.
 
-## 📁 Project Structure
+### 🌐 Internal Infrastructure Audit
+- **Stealth Port Scanning**: Advanced Nmap integration for deep service discovery across multi-zone networks.
+- **Security Mapping**: Automated mapping of internal service risks and misconfigurations.
+- **Topology Discovery**: Visualizing network relationships and potential pivot points.
 
-- `src/pages`: React components and API routes.
-- `src/utils/securityScanner.ts`: Core security analysis engine.
-- `src/utils/githubScanner.ts`: Repository exposure monitor logic.
-- `src/utils/nmapScanner.ts`: Internal network audit engine.
+### 🐙 Exposure Monitor
+- **Repository Scanning**: Deep-dive surveillance of GitHub repositories for exposed credentials, `.env` files, and secrets.
+- **Pattern Matching**: Advanced regex engine designed to catch high-entropy tokens and configuration leaks.
+- **OSINT Intel**: Gathering public metadata to build a comprehensive risk profile of your digital footprint.
 
-## 🐳 Deployment & Docker
+---
 
-Sentinel provides a slim Docker image for easy deployment.
+## 🚀 Getting Started
 
-### Docker Compose (Local Development)
+### Prerequisites
 
-The easiest way to run the full stack locally (including dynamic DOM analysis) is using Docker Compose. Create a `docker-compose.yml`:
+Sentinel requires the following system-level tools to perform deep scanning:
+- `nmap`: Required for network discovery.
+- `whois`: Required for domain audit.
+- `traceroute`: Required for network path analysis.
+
+### Quick Start (Local Development)
+
+1. **Clone & Install**
+   ```bash
+   git clone https://github.com/nirmalhk7/sentinel.git
+   cd sentinel
+   npm install
+   ```
+
+2. **Environment Setup**
+   Configure your `.env` for repository monitoring:
+   ```bash
+   GITHUB_TOKEN=your_token_here
+   ```
+
+3. **Launch**
+   ```bash
+   npm run dev
+   ```
+
+Open [http://localhost:3000](http://localhost:3000) to access your new security station.
+
+---
+
+## 🐳 Deployment
+
+Sentinel is built for containerized environments, ensuring scale and consistency across production clusters.
+
+### Kubernetes Best Practices
+The Sentinel Docker image is optimized to be **slim** (~250MB). For production, we recommend running Chromium as a separate microservice:
 
 ```yaml
-version: '3.8'
-services:
-  sentinel:
-    image: ghcr.io/your-org/sentinel:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - BROWSERLESS_URL=ws://browserless:3000
-    cap_add:
-      - NET_RAW
-    depends_on:
-      - browserless
-
-  browserless:
-    image: browserless/chrome:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - MAX_CONCURRENT_SESSIONS=10
+# Deployment snippet targeting sentinel with NET_RAW capability
+securityContext:
+  capabilities:
+    add:
+      - NET_RAW # Enables stealth nmap scanning
+env:
+  - name: BROWSERLESS_URL
+    value: "ws://browserless-service:3000"
 ```
 
-Run with `docker-compose up -d`.
-
-### Kubernetes Deployment (Production)
-
-To deploy Sentinel in a Kubernetes cluster alongside a remote Chromium node, use the following example. Notice that `NET_RAW` is added to capabilities to allow deep Nmap stealth scans.
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: sentinel
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: sentinel
-  template:
-    metadata:
-      labels:
-        app: sentinel
-    spec:
-      containers:
-        - name: sentinel
-          image: ghcr.io/your-org/sentinel:latest
-          ports:
-            - containerPort: 3000
-          env:
-            - name: BROWSERLESS_URL
-              value: "ws://browserless-service:3000"
-          securityContext:
-            capabilities:
-              add:
-                - NET_RAW # Required for raw socket scans in Nmap (-sS, -O, etc.)
+> [!TIP]
+> Refer to the [Deployment Guide](./docs/deployment.md) for full Docker Compose and Kubernetes manifests.
 
 ---
-# Separate Browserless Deployment for DOM Analysis
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: browserless
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: browserless
-  template:
-    metadata:
-      labels:
-        app: browserless
-    spec:
-      containers:
-        - name: browserless
-          image: browserless/chrome:latest
-          ports:
-            - containerPort: 3000
-```
 
-## ⚖️ Legal
+## 🛡️ Responsible Use & Ethical Policy
 
-Sentinel is provided under the terms specified as an open-source project. This tool is provided "as is" without warranty of any kind.
+Sentinel is a powerful tool designed for **authorized security audits and educational research only**. 
+By utilizing this software, you commit to:
+- **Authorization First**: Only scan systems you own or have explicit written permission to audit.
+- **Do No Harm**: Avoid disruptive scanning on production systems without prior impact assessment.
+- **Responsible Disclosure**: Report found vulnerabilities to the affected parties privately and ethically.
 
-# ⚠️ LEGAL DISCLAIMER & EDUCATIONAL USE ONLY ⚠️
+---
 
-> **IMPORTANT:** This project is provided strictly for **EDUCATIONAL AND RESEARCH PURPOSES ONLY**. 
-> 
-> The author(s) and contributors of this project **DO NOT assume any responsibility or liability** for any misuse, damage, or illegal activities conducted using this tool. 
-> 
-> **NEVER** use this tool against any target (domain, network, OR IP) without explicit, written authorization from the owner. Unauthorized scanning or testing of networks is illegal and unethical. Use this software at your own risk.
+## ⚖️ Legal Disclaimer
+
+> [!CAUTION]
+> This project is provided strictly for **EDUCATIONAL AND RESEARCH PURPOSES ONLY**. 
+> The authors and contributors assume **no liability** for misuse or illegal use of this software. Unauthorized scanning of third-party networks is a violation of international laws and may result in criminal prosecution.
+
+---
+
+<p align="center">
+  Built with ❤️ for the security community.
+</p>

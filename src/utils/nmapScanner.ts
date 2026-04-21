@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { exec } from 'child_process';
 import { parseStringPromise } from 'xml2js';
 import { ScanLimiter } from './scanLimiter';
@@ -31,7 +32,7 @@ export class NmapScanner {
     this.target = target;
   }
 
-  private async runNmap(args: string[], timeoutMs: number = 3600000): Promise<any> {
+  private async runNmap(args: string[], timeoutMs: number = 3600000): Promise<unknown> {
     // Check Rate Limiting
     const limit = ScanLimiter.checkAndRecord(this.target);
     if (!limit.allowed) {
@@ -63,8 +64,9 @@ export class NmapScanner {
         try {
           const result = await parseStringPromise(stdout);
           resolve(result);
-        } catch (e: any) {
-          reject(new Error(`Failed to parse Nmap output: ${e.message}`));
+        } catch (e: unknown) {
+          const error = e as Error;
+          reject(new Error(`Failed to parse Nmap output: ${error.message}`));
         }
       });
     });
@@ -110,6 +112,7 @@ export class NmapScanner {
     ], 600000)); // 10 minute timeout for deep audit
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private parseNmapOutput(data: any): NmapHost[] {
     if (!data.nmaprun || !data.nmaprun.host) return [];
 

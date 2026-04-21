@@ -5,7 +5,6 @@
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { SecurityScanner, ScanResult } from '@/utils/securityScanner';
-import axios from 'axios';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -30,7 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       vulnerabilities: sorted,
       crawlTree: Object.fromEntries(scanner.crawlTree),
     });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message ?? 'Scan failed' });
+  } catch (e: unknown) {
+    const error = e as Error;
+    return res.status(500).json({ error: error.message ?? 'Scan failed' });
   }
 }

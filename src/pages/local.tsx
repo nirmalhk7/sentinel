@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import { useState, useEffect, useRef } from 'react';
 
 interface ScanResult {
   id: number;
@@ -37,8 +38,6 @@ export default function LocalScanner() {
   const [statusFilter, setStatusFilter] = useState<string>('All (Critical)');
   const [totalSteps, setTotalSteps] = useState<number>(0);
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [sortBy, setSortBy] = useState<'id' | 'status'>('id');
-  const eventSourceRef = useRef<EventSource | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -113,8 +112,9 @@ export default function LocalScanner() {
             } catch {}
           }
         }
-      } catch (e: any) {
-        if (e.name !== 'AbortError') setError(e.message);
+      } catch (e: unknown) {
+        const error = e as Error;
+        if (error.name !== 'AbortError') setError(error.message);
       } finally {
         setIsScanning(false);
         setIsDone(true);
@@ -144,7 +144,7 @@ export default function LocalScanner() {
     .filter(r => r.status !== 'SAFE')
     .filter(r => filter === 'All' || r.category === filter)
     .filter(r => statusFilter === 'All (Critical)' || r.status === statusFilter)
-    .sort((a, b) => sortBy === 'id' ? a.id - b.id : ['VULNERABLE','WARNING','NEUTRAL'].indexOf(a.status) - ['VULNERABLE','WARNING','NEUTRAL'].indexOf(b.status));
+    .sort((a, b) => a.id - b.id);
 
   const categories = [...new Set(results.map(r => r.category))];
 
@@ -163,23 +163,23 @@ export default function LocalScanner() {
             <span className="text-white font-bold tracking-tight">SENTINEL <span className="text-sky-500">PRO</span></span>
           </div>
           <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
-            <a 
+            <Link 
               href="/"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Website Audit
-            </a>
+            </Link>
             <button 
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white cursor-default`}
             >
               Local Network
             </button>
-            <a 
+            <Link 
               href="/github"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               GitHub Scan
-            </a>
+            </Link>
           </div>
           <div className="hidden md:flex items-center gap-4">
              <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Version 2.4.0</span>

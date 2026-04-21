@@ -21,12 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
-  const send = (data: any) => {
+  const send = (data: { type: string; payload?: unknown; message?: string; current?: number; total?: number }) => {
     // Log to server CLI
     if (data.type === 'progress') {
        console.log(`\x1b[35m[LOCAL SCAN] ${data.message}\x1b[0m`);
     } else if (data.type === 'result') {
-       const { feature, category, status } = data.payload;
+       const payload = data.payload as { feature: string; category: string; status: string };
+       const { feature, category, status } = payload;
        const color = status === 'VULNERABLE' ? '\x1b[31m' : (status === 'WARNING' ? '\x1b[33m' : '\x1b[32m');
        console.log(`  └─ [${color}${status}\x1b[0m] ${category}: ${feature}`);
     }
@@ -81,9 +82,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     send({ type: 'done', message: `Local scan finished. Analyzed ${hosts.length} active host(s).` });
 
-  } catch (e: any) {
-    console.error(`\x1b[31m[LOCAL SCAN ERROR] ${e.message}\x1b[0m`);
-    send({ type: 'error', message: e.message });
+  } catch (e: unknown) {
+    const error = e as Error;
+    console.error(`\x1b[31m[LOCAL SCAN ERROR] ${error.message}\x1b[0m`);
+    send({ type: 'error', message: error.message });
   }
 
   res.end();

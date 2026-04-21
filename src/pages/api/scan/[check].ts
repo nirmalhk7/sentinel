@@ -42,18 +42,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const needsHttp: Check[] = ['fingerprint', 'headers', 'passive-headers', 'cookies', 'caching', 'waf'];
-    let initialRes: any = null;
+    let initialRes: import('axios').AxiosResponse | null = null;
     if (needsHttp.includes(check as Check)) {
       initialRes = await fetchInitial(scanner);
       if (!initialRes) return res.status(502).json({ error: `Cannot reach ${domain}` });
     }
+    const safeRes = initialRes!; // Guaranteed by check above
 
     switch (check as Check) {
-      case 'fingerprint':      await scanner.checkSoftwareFingerprint(initialRes); break;
-      case 'headers':          await scanner.checkSecurityHeaders(initialRes); break;
-      case 'passive-headers':  await scanner.checkPassiveHeaders(initialRes); break;
-      case 'cookies':          await scanner.checkCookieSecurity(initialRes); break;
-      case 'caching':          await scanner.checkCachingHeaders(initialRes); break;
+      case 'fingerprint':      await scanner.checkSoftwareFingerprint(safeRes); break;
+      case 'headers':          await scanner.checkSecurityHeaders(safeRes); break;
+      case 'passive-headers':  await scanner.checkPassiveHeaders(safeRes); break;
+      case 'cookies':          await scanner.checkCookieSecurity(safeRes); break;
+      case 'caching':          await scanner.checkCachingHeaders(safeRes); break;
       case 'ssl':              await scanner.checkSSL(); break;
       case 'dns':              await scanner.checkDNS(); break;
       case 'whois':            await scanner.checkWhois(); break;
@@ -63,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'js':
         await scanner.crawlAndAnalyze(); 
         await scanner.analyzeJsResources(); break;
-      case 'waf':              await scanner.checkWAF(initialRes); break;
+      case 'waf':              await scanner.checkWAF(safeRes); break;
       case 'ports':            await scanner.checkPorts(); break;
       case 'osint':            await scanner.subdomainDiscoveryOSINT(); break;
       case 'cloud':            await scanner.checkCloudMetadata(); break;
@@ -82,7 +83,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       count: collected.length,
       results: collected,
     });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message ?? 'Scan failed' });
+  } catch (e: unknown) {
+    const error = e as Error;
+    return res.status(500).json({ error: error.message ?? 'Scan failed' });
   }
 }

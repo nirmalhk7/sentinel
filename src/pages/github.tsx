@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 
 interface EnvPair {
   key: string;
@@ -27,7 +28,7 @@ export default function GitHubScanner() {
       const data = await res.json();
       setResults(data.results || []);
       setLastScan(data.lastScan);
-    } catch (e) {
+    } catch {
       setError('Failed to fetch data');
     }
   };
@@ -68,7 +69,7 @@ export default function GitHubScanner() {
       const data = await res.json();
       setResults(data.results || []);
       setLastScan(Date.now());
-    } catch (e) {
+    } catch {
       setError('Failed to trigger scan');
     } finally {
       setIsScanning(false);
@@ -103,18 +104,18 @@ export default function GitHubScanner() {
             <span className="text-white font-bold tracking-tight">SENTINEL <span className="text-sky-500">PRO</span></span>
           </div>
           <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
-            <a 
+            <Link 
               href="/"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Website Audit
-            </a>
-            <a 
+            </Link>
+            <Link 
               href="/local"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Local Network
-            </a>
+            </Link>
             <button 
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white cursor-default`}
             >

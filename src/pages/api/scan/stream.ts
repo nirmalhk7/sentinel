@@ -12,7 +12,6 @@
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { SecurityScanner } from '@/utils/securityScanner';
-import axios from 'axios';
 
 export const config = { api: { responseLimit: false } };
 
@@ -29,12 +28,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
-  const send = (data: any) => {
+  const send = (data: { type: string; payload?: unknown; message?: string; current?: number; total?: number; crawlTree?: unknown }) => {
     // Log results and progress to server CLI for developer visibility
     if (data.type === 'progress') {
       console.log(`[SCAN PROGRESS] ${data.message}`);
     } else if (data.type === 'result') {
-      const { feature, category, status } = data.payload;
+      const payload = data.payload as import('@/utils/securityScanner').ScanResult;
+      const { feature, category, status } = payload;
       const statusColor = status === 'VULNERABLE' ? '\x1b[31m' : (status === 'WARNING' ? '\x1b[33m' : '\x1b[32m');
       console.log(`[RESULT] ${category} > ${feature}: ${statusColor}${status}\x1b[0m`);
     } else if (data.type === 'done') {
@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     res.write(`data: ${JSON.stringify(data)}\n\n`);
-    if (typeof (res as any).flush === 'function') (res as any).flush();
+    if (typeof (res as unknown as { flush: () => void }).flush === 'function') (res as unknown as { flush: () => void }).flush();
   };
 
   const progress = (message: string, current?: number, total?: number) => 
@@ -68,8 +68,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         crawlTree: Object.fromEntries(scanner.crawlTree)
       });
     }
-  } catch (e: any) {
-    send({ type: 'error', message: e.message ?? 'Unknown error during scan' });
+  } catch (e: unknown) {
+    const error = e as Error;
+    send({ type: 'error', message: error.message ?? 'Unknown error during scan' });
   }
 
   res.end();
