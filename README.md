@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/nirmalhk7/sentinel/main/public/logo.png" alt="Sentinel Logo" width="120" />
   <h1>SENTINEL</h1>
   <p><strong>Professional-Grade Security Audit & Intelligence Station</strong></p>
 
