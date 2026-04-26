@@ -32,11 +32,13 @@ export class NmapScanner {
     this.target = target;
   }
 
-  private async runNmap(args: string[], timeoutMs: number = 3600000): Promise<unknown> {
-    // Check Rate Limiting
-    const limit = ScanLimiter.checkAndRecord(this.target);
-    if (!limit.allowed) {
-      throw new Error(`[RATE LIMIT] ${limit.reason}`);
+  private async runNmap(args: string[], timeoutMs: number = 3600000, bypassRateLimit: boolean = false): Promise<unknown> {
+    // Check Rate Limiting (bypassed for cron-driven background scans)
+    if (!bypassRateLimit) {
+      const limit = ScanLimiter.checkAndRecord(this.target);
+      if (!limit.allowed) {
+        throw new Error(`[RATE LIMIT] ${limit.reason}`);
+      }
     }
 
     // Stealth Flags:
@@ -103,13 +105,13 @@ export class NmapScanner {
    * Local Network Aggressive Audit 
    * Uses ALL possible features for deep security risk assessment on local/private networks.
    */
-  public async localAudit(): Promise<NmapHost[]> {
+  public async localAudit(bypassRateLimit: boolean = false): Promise<NmapHost[]> {
     return this.parseNmapOutput(await this.runNmap([
-      '-A', 
-      '-T4', 
-      '--script', 'vuln,exploit,auth,brute,broadcast', 
+      '-A',
+      '-T4',
+      '--script', 'vuln,exploit,auth,brute,broadcast',
       '--open'
-    ], 600000)); // 10 minute timeout for deep audit
+    ], 600000, bypassRateLimit)); // 10 minute timeout for deep audit
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

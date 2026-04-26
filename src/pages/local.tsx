@@ -18,6 +18,19 @@ interface ScanEvent {
   message?: string;
   current?: number;
   total?: number;
+  diff?: { added: number; removed: number; changed: number; total: number };
+}
+
+interface PassiveDevice {
+  identifier: string;
+  ip?: string;
+  mac?: string;
+  hostname?: string;
+  source: 'arp' | 'mdns' | 'ssdp';
+  service?: string;
+  meta?: string;
+  firstSeen: string;
+  lastSeen: string;
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
@@ -38,15 +51,20 @@ export default function LocalScanner() {
   const [statusFilter, setStatusFilter] = useState<string>('All (Critical)');
   const [totalSteps, setTotalSteps] = useState<number>(0);
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [lastScan, setLastScan] = useState<number>(0);
+  const [diff, setDiff] = useState<{ added: number; removed: number; changed: number; total: number } | null>(null);
+  const [tab, setTab] = useState<'active' | 'passive'>('active');
+  const [passiveDevices, setPassiveDevices] = useState<PassiveDevice[]>([]);
+  const [passiveRunning, setPassiveRunning] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  const startScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!target.trim() || isScanning) return;
+  const runScan = (scanTarget: string) => {
+    const trimmed = scanTarget.trim();
+    if (!trimmed || isScanning) return;
 
     setResults([]);
     setLogs([]);
@@ -60,7 +78,7 @@ export default function LocalScanner() {
 
     const abortController = new AbortController();
     const apiRoute = '/api/local';
-    const body = { network: target.trim() || '127.0.0.1' };
+    const body = { network: trimmed };
 
     (async () => {
       try {
@@ -106,6 +124,8 @@ export default function LocalScanner() {
               } else if (event.type === 'done') {
                 setLogs(prev => [...prev, '✅ Scan complete!']);
                 setIsDone(true);
+                setLastScan(Date.now());
+                if (event.diff) setDiff(event.diff);
               } else if (event.type === 'error') {
                 setError(event.message ?? 'Unknown error');
               }
@@ -123,6 +143,54 @@ export default function LocalScanner() {
 
     return () => { abortController.abort(); };
   };
+
+  const startScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    runScan(target);
+  };
+
+  // On mount: load cached cron result. If none, auto-trigger a scan with the default target.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/local/history');
+        const data = await res.json();
+        if (cancelled) return;
+        const initialTarget = data?.record?.target || data?.defaultTarget || '';
+        setTarget(initialTarget);
+        if (data?.record?.results?.length) {
+          setResults(data.record.results);
+          setLastScan(data.lastScan || 0);
+          setIsDone(true);
+        } else if (initialTarget) {
+          runScan(initialTarget);
+        }
+      } catch {
+        // If the history endpoint fails, leave the form blank so user can scan manually.
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Refresh passive devices every 10s
+  useEffect(() => {
+    let cancelled = false;
+    const fetchPassive = async () => {
+      try {
+        const res = await fetch('/api/local/passive');
+        const data = await res.json();
+        if (!cancelled) {
+          setPassiveDevices(data.devices ?? []);
+          setPassiveRunning(!!data.isRunning);
+        }
+      } catch {}
+    };
+    fetchPassive();
+    const t = setInterval(fetchPassive, 10_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
 
   const stopScan = () => {
     setIsScanning(false);
@@ -163,18 +231,24 @@ export default function LocalScanner() {
             <span className="text-white font-bold tracking-tight">SENTINEL <span className="text-sky-500">PRO</span></span>
           </div>
           <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
-            <Link 
+            <Link
+              href="/dashboard"
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
+            >
+              Dashboard
+            </Link>
+            <Link
               href="/"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Website Audit
             </Link>
-            <button 
+            <button
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white cursor-default`}
             >
               Local Network
             </button>
-            <Link 
+            <Link
               href="/github"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
@@ -211,12 +285,84 @@ export default function LocalScanner() {
               <button type="submit" disabled={!target.trim()} className="bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:text-slate-500 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex-shrink-0 transition">Run Audit</button>
             )}
           </form>
+          {lastScan > 0 && (
+            <p className="mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+              Last Cron Scan: {new Date(lastScan).toLocaleString()}
+            </p>
+          )}
+
           {error && <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-xl text-xs">{error}</div>}
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-        {(isScanning || isDone) && (
+        {/* Tab switcher: Active vs Passive */}
+        <div className="flex gap-2 p-1 bg-slate-900/50 rounded-xl border border-slate-800 w-fit">
+          <button
+            onClick={() => setTab('active')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${tab === 'active' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            Active Audit
+          </button>
+          <button
+            onClick={() => setTab('passive')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 ${tab === 'passive' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            Passive Listen
+            {passiveRunning && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+            <span className="text-[10px] opacity-70">{passiveDevices.length}</span>
+          </button>
+        </div>
+
+        {tab === 'active' && diff && diff.total > 0 && (
+          <div className="bg-sky-500/5 border border-sky-500/30 rounded-2xl p-4 flex flex-wrap items-center gap-4">
+            <span className="text-[10px] font-black uppercase tracking-widest text-sky-400">Changes since last scan</span>
+            <span className="text-emerald-400 text-sm font-bold">+{diff.added} new</span>
+            <span className="text-rose-400 text-sm font-bold">-{diff.removed} resolved</span>
+            <span className="text-amber-400 text-sm font-bold">~{diff.changed} changed</span>
+          </div>
+        )}
+
+        {tab === 'passive' && (
+          <div className="bg-[#0d111a] border border-slate-800 rounded-3xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-800 bg-emerald-500/5 flex items-center justify-between">
+              <div>
+                <span className="text-sm font-bold text-white uppercase tracking-widest">Passive Discovery</span>
+                <p className="text-[10px] text-slate-500 mt-1">ARP table + mDNS (5353) + SSDP (1900). Listen-only, no probes.</p>
+              </div>
+              <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded ${passiveRunning ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-500 border border-slate-700'}`}>
+                {passiveRunning ? 'Listening' : 'Idle'}
+              </span>
+            </div>
+            {passiveDevices.length > 0 ? (
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-950/50">
+                    {['Source', 'IP', 'MAC / ID', 'Service', 'First Seen', 'Last Seen'].map(h => (
+                      <th key={h} className="px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {passiveDevices.map(d => (
+                    <tr key={d.identifier} className="border-t border-slate-800/50 hover:bg-slate-800/20">
+                      <td className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-emerald-400">{d.source}</td>
+                      <td className="px-6 py-3 text-xs text-white font-mono">{d.ip ?? '—'}</td>
+                      <td className="px-6 py-3 text-xs text-slate-400 font-mono break-all">{d.mac ?? d.identifier.slice(0, 40)}</td>
+                      <td className="px-6 py-3 text-xs text-slate-400">{d.service ?? '—'}{d.meta ? ` · ${d.meta}` : ''}</td>
+                      <td className="px-6 py-3 text-[10px] text-slate-500">{new Date(d.firstSeen).toLocaleString()}</td>
+                      <td className="px-6 py-3 text-[10px] text-slate-500">{new Date(d.lastSeen).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="py-12 text-center text-slate-600 text-xs">No devices observed yet — listeners pick things up over time as devices broadcast.</div>
+            )}
+          </div>
+        )}
+
+        {tab === 'active' && (isScanning || isDone) && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
              <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 md:col-span-1">
                 <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Risk Score</div>
@@ -234,7 +380,7 @@ export default function LocalScanner() {
           </div>
         )}
 
-        {(isScanning || logs.length > 0) && (
+        {tab === 'active' && (isScanning || logs.length > 0) && (
           <div className="bg-black border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
             <div className="bg-slate-900/50 px-5 py-2 border-b border-slate-800 text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Audit Logs
@@ -246,7 +392,7 @@ export default function LocalScanner() {
           </div>
         )}
 
-        {results.length > 0 && (
+        {tab === 'active' && results.length > 0 && (
           <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
              <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-black/20">
                 <span className="text-xs font-black uppercase tracking-widest text-white">Audit Results</span>

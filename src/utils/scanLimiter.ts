@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { DATA_DIR, ensureDataDir } from './paths';
 
-const HISTORY_FILE = path.join(process.cwd(), '.scan_history.json');
+const HISTORY_FILE = path.join(DATA_DIR, 'scan_history.json');
 
 export interface ScanHistory {
   date: string; // ISO Date YYYY-MM-DD
@@ -30,6 +31,7 @@ export class ScanLimiter {
 
   private static saveHistory(history: ScanHistory) {
     try {
+      ensureDataDir();
       fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
     } catch (e) {
       console.error('Failed to save scan history:', e);

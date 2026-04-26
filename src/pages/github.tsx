@@ -16,26 +16,66 @@ interface GitHubEnvResult {
   extractedEnvs: EnvPair[];
 }
 
+interface ScannerHealth {
+  proxyCount: number;
+  lastProxyRefresh: number;
+  tokenCount: number;
+  queryCount: number;
+  totalResults: number;
+  lastScanTime: number;
+  isScanning: boolean;
+}
+
 export default function GitHubScanner() {
   const [results, setResults] = useState<GitHubEnvResult[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [lastScan, setLastScan] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<ScannerHealth | null>(null);
+
+  const triggerScan = async () => {
+    setIsScanning(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/github/search', { method: 'POST' });
+      const data = await res.json();
+      setResults(data.results || []);
+      setLastScan(Date.now());
+    } catch {
+      setError('Failed to trigger scan');
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
       const res = await fetch('/api/github/search');
       const data = await res.json();
-      setResults(data.results || []);
+      const cached = data.results || [];
+      setResults(cached);
       setLastScan(data.lastScan);
+      // Auto-trigger if no cached cron result exists yet
+      if (cached.length === 0) {
+        triggerScan();
+      }
     } catch {
       setError('Failed to fetch data');
     }
   };
 
+  const fetchHealth = async () => {
+    try {
+      const res = await fetch('/api/github/health');
+      if (res.ok) setHealth(await res.json());
+    } catch {}
+  };
+
   useEffect(() => {
     fetchData();
-    
+    fetchHealth();
+    const healthTimer = setInterval(fetchHealth, 15_000);
+
     // Connect to real-time SSE stream
     const eventSource = new EventSource('/api/github/stream');
     
@@ -57,24 +97,10 @@ export default function GitHubScanner() {
     };
 
     return () => {
+      clearInterval(healthTimer);
       eventSource.close();
     };
   }, []);
-
-  const triggerScan = async () => {
-    setIsScanning(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/github/search', { method: 'POST' });
-      const data = await res.json();
-      setResults(data.results || []);
-      setLastScan(Date.now());
-    } catch {
-      setError('Failed to trigger scan');
-    } finally {
-      setIsScanning(false);
-    }
-  };
 
   // Aggregate all env pairs for the "All Env Values" section
   const allEnvValues = useMemo(() => {
@@ -104,19 +130,25 @@ export default function GitHubScanner() {
             <span className="text-white font-bold tracking-tight">SENTINEL <span className="text-sky-500">PRO</span></span>
           </div>
           <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
-            <Link 
+            <Link
+              href="/dashboard"
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
+            >
+              Dashboard
+            </Link>
+            <Link
               href="/"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Website Audit
             </Link>
-            <Link 
+            <Link
               href="/local"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Local Network
             </Link>
-            <button 
+            <button
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white cursor-default`}
             >
               GitHub Scan
@@ -160,6 +192,17 @@ export default function GitHubScanner() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-12">
+        {/* Sweep Health */}
+        {health && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <HealthCell label="Queries" value={String(health.queryCount)} hint="filename / extension queries" tone="neutral" />
+            <HealthCell label="Tokens" value={String(health.tokenCount)} hint={health.tokenCount > 0 ? 'GITHUB_TOKEN(S) configured' : 'set GITHUB_TOKEN/GITHUB_TOKENS for higher rate limits'} tone={health.tokenCount > 0 ? 'good' : 'warn'} />
+            <HealthCell label="Proxies" value={String(health.proxyCount)} hint={health.lastProxyRefresh ? `refreshed ${new Date(health.lastProxyRefresh).toLocaleTimeString()}` : 'not loaded'} tone={health.proxyCount > 0 ? 'good' : 'warn'} />
+            <HealthCell label="Files Found" value={String(health.totalResults)} hint="cumulative" tone="neutral" />
+            <HealthCell label="Status" value={health.isScanning ? 'Scanning' : 'Idle'} hint={health.lastScanTime ? `last ${new Date(health.lastScanTime).toLocaleTimeString()}` : 'never'} tone={health.isScanning ? 'good' : 'neutral'} />
+          </div>
+        )}
+
         {/* NEW SECTION: All Env Values */}
         <section>
           <div className="bg-[#0d111a] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
@@ -318,6 +361,17 @@ export default function GitHubScanner() {
       <footer className="py-20 text-center opacity-30">
         <p className="text-xs font-black uppercase tracking-widest">Sentinel Repository Security Monitor v1.1</p>
       </footer>
+    </div>
+  );
+}
+
+function HealthCell({ label, value, hint, tone }: { label: string; value: string; hint: string; tone: 'good' | 'warn' | 'neutral' }) {
+  const valueColor = tone === 'good' ? 'text-emerald-400' : tone === 'warn' ? 'text-amber-400' : 'text-white';
+  return (
+    <div className="bg-[#0d111a] border border-slate-800 rounded-2xl p-5">
+      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">{label}</div>
+      <div className={`text-2xl font-black ${valueColor}`}>{value}</div>
+      <div className="text-[10px] text-slate-500 mt-2">{hint}</div>
     </div>
   );
 }

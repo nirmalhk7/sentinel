@@ -12,6 +12,9 @@
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { SecurityScanner } from '@/utils/securityScanner';
+import { saveSnapshot, loadPrevious } from '@/utils/snapshots';
+import { diffById, summarise } from '@/utils/diffEngine';
+import { runOsint } from '@/utils/osintScanner';
 
 export const config = { api: { responseLimit: false } };
 
@@ -28,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
-  const send = (data: { type: string; payload?: unknown; message?: string; current?: number; total?: number; crawlTree?: unknown }) => {
+  const send = (data: { type: string; payload?: unknown; message?: string; current?: number; total?: number; crawlTree?: unknown; diff?: unknown }) => {
     // Log results and progress to server CLI for developer visibility
     if (data.type === 'progress') {
       console.log(`[SCAN PROGRESS] ${data.message}`);
@@ -51,9 +54,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     send({ type: 'progress', message, current, total });
 
   console.log(`\x1b[34m[SCAN START] Initiating security audit for: ${domain}\x1b[0m`);
+  const collected: import('@/utils/securityScanner').ScanResult[] = [];
   const scanner = new SecurityScanner(
     domain,
-    result => send({ type: 'result', payload: result }),
+    result => {
+      collected.push(result);
+      send({ type: 'result', payload: result });
+    },
     { maxPages: typeof maxPages === 'number' ? maxPages : 25 },
   );
 
@@ -62,10 +69,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if ('error' in result) {
       send({ type: 'error', message: result.error });
     } else {
-      send({ 
-        type: 'done', 
+      // Layer in passive OSINT findings on the same stream
+      progress('Running passive OSINT lookups…');
+      try {
+        await runOsint(domain, {
+          emit: f => {
+            collected.push(f as unknown as import('@/utils/securityScanner').ScanResult);
+            send({ type: 'result', payload: f });
+          },
+        });
+      } catch (e) {
+        const err = e as Error;
+        console.warn(`[OSINT] ${err.message}`);
+      }
+
+      // Snapshot + diff
+      const previous = loadPrevious<typeof collected>('web', domain);
+      saveSnapshot('web', domain, collected);
+      const diff = summarise(diffById(previous?.payload, collected, x => `${x.id}-${x.feature}`, x => `${x.status}-${x.description}`));
+
+      send({
+        type: 'done',
         message: `Scan complete — ${scanner.discoveredPages.size} page(s), ${scanner.jsResources.size} JS file(s) analysed.`,
-        crawlTree: Object.fromEntries(scanner.crawlTree)
+        crawlTree: Object.fromEntries(scanner.crawlTree),
+        diff,
       });
     }
   } catch (e: unknown) {

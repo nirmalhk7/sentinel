@@ -51,10 +51,30 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Persistent scan history (mount a host volume here to survive restarts)
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+VOLUME ["/app/data"]
+
 USER nextjs
 
 EXPOSE 3000
 ENV PORT=3000
+ENV DATA_DIR=/app/data
+ENV SCAN_TARGET=192.168.1.0/24
+
+# Optional passive-OSINT API keys — leave unset to disable a provider.
+# ENV SHODAN_API_KEY=
+# ENV CENSYS_API_ID=
+# ENV CENSYS_API_SECRET=
+# ENV VT_API_KEY=
+# ENV URLSCAN_API_KEY=
+# ENV HIBP_API_KEY=
+# ENV SECURITYTRAILS_API_KEY=
+# ENV GREYNOISE_API_KEY=
+# ENV HUNTER_API_KEY=
+# ENV GITHUB_TOKEN=
+# ENV GITHUB_TOKENS=  # comma-separated to multiply rate-limit budget
+# ENV ALERT_WEBHOOK_URL=  # Slack/Discord/n8n receiver for change alerts
 
 # server.js is created by next build from the standalone output
 CMD ["node", "server.js"]

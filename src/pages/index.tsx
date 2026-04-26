@@ -19,6 +19,7 @@ interface ScanEvent {
   current?: number;
   total?: number;
   crawlTree?: Record<string, { url: string; children: string[]; type: 'page' | 'js' | 'subdomain' | 'api' }>;
+  diff?: { added: number; removed: number; changed: number; total: number };
 }
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; dot: string }> = {
@@ -43,6 +44,7 @@ export default function Scanner() {
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [sortBy, setSortBy] = useState<'id' | 'status'>('id');
   const [crawlTree, setCrawlTree] = useState<Record<string, { url: string; children: string[]; type: string }> | null>(null);
+  const [diff, setDiff] = useState<{ added: number; removed: number; changed: number; total: number } | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +67,7 @@ export default function Scanner() {
     setTotalSteps(0);
     setCurrentStep(0);
     setCrawlTree(null);
+    setDiff(null);
 
     const abortController = new AbortController();
     const apiRoute = '/api/scan/stream';
@@ -116,6 +119,7 @@ export default function Scanner() {
               } else if (event.type === 'done') {
                 setLogs(prev => [...prev, '✅ Scan complete!']);
                 if (event.crawlTree) setCrawlTree(event.crawlTree);
+                if (event.diff) setDiff(event.diff);
                 setIsDone(true);
               } else if (event.type === 'error') {
                 setError(event.message ?? 'Unknown error');
@@ -181,18 +185,24 @@ export default function Scanner() {
             <span className="text-white font-bold tracking-tight">SENTINEL <span className="text-sky-500">PRO</span></span>
           </div>
           <div className="flex gap-1 p-1 bg-slate-900/50 rounded-xl border border-slate-800">
-            <button 
+            <Link
+              href="/dashboard"
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
+            >
+              Dashboard
+            </Link>
+            <button
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition bg-sky-600 text-white`}
             >
               Website Audit
             </button>
-            <Link 
+            <Link
               href="/local"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
               Local Network
             </Link>
-            <Link 
+            <Link
               href="/github"
               className={`px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center`}
             >
@@ -268,6 +278,16 @@ export default function Scanner() {
 
       {/* ── Body ── */}
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+
+        {/* Diff banner */}
+        {diff && diff.total > 0 && (
+          <div className="bg-sky-500/5 border border-sky-500/30 rounded-2xl p-4 flex flex-wrap items-center gap-4">
+            <span className="text-[10px] font-black uppercase tracking-widest text-sky-400">Changes since last scan</span>
+            <span className="text-emerald-400 text-sm font-bold">+{diff.added} new</span>
+            <span className="text-rose-400 text-sm font-bold">-{diff.removed} resolved</span>
+            <span className="text-amber-400 text-sm font-bold">~{diff.changed} changed</span>
+          </div>
+        )}
 
         {/* Progress Bar */}
         {(isScanning || isDone) && totalSteps > 0 && (
