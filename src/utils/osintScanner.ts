@@ -427,7 +427,7 @@ export async function runOsint(domain: string, opts: OsintRunOptions): Promise<O
     });
   }
 
-  for (const p of PROVIDERS) {
+  const providerPromises = PROVIDERS.map(async (p) => {
     if (!p.enabled()) {
       const finding: OsintFinding = {
         id: nextId(),
@@ -439,7 +439,7 @@ export async function runOsint(domain: string, opts: OsintRunOptions): Promise<O
       };
       opts.emit(finding);
       collected.push(finding);
-      continue;
+      return;
     }
     const ctx: ProviderCtx = {
       domain,
@@ -456,6 +456,9 @@ export async function runOsint(domain: string, opts: OsintRunOptions): Promise<O
       const err = e as Error;
       console.warn(`[OSINT ${p.name}] ${err.message}`);
     }
-  }
+  });
+
+  await Promise.allSettled(providerPromises);
+
   return collected;
 }
